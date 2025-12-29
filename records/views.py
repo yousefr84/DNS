@@ -1,11 +1,16 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, mixins
 from rest_framework.response import Response
 
 from .models import DNSRecord
 from .serializers import DNSRecordSerializer
 
 
-class AdminRecordViewSet(viewsets.ModelViewSet):
+class AdminRecordViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
     """
     /admin/record
     """
@@ -13,16 +18,25 @@ class AdminRecordViewSet(viewsets.ModelViewSet):
     queryset = DNSRecord.objects.all().order_by("domain")
     serializer_class = DNSRecordSerializer
 
+    # استفاده از domain به عنوان lookup
+    lookup_field = "domain"
+    lookup_url_kwarg = "domain"
+
+    # ⭐ حیاتی: اجازه‌ی استفاده از domain دارای dot مثل example.com
+    lookup_value_regex = r"[^/]+"
+
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
+
+        # تبدیل type → record_type
         if "type" in data:
             data["record_type"] = data.pop("type")
 
-        # بررسی یکتا بودن
+        # بررسی یکتا بودن رکورد
         if DNSRecord.objects.filter(
-                domain=data.get("domain"),
-                record_type=data.get("record_type"),
-                value=data.get("value")
+            domain=data.get("domain"),
+            record_type=data.get("record_type"),
+            value=data.get("value"),
         ).exists():
             return Response(
                 {"status": "error", "message": "Record already exists"},
@@ -32,25 +46,34 @@ class AdminRecordViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        return Response({"status": "success", "message": "record added", "data": serializer.data}, status=201)
 
-
+        return Response(
+            {
+                "status": "success",
+                "message": "record added",
+                "data": serializer.data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
     def destroy(self, request, *args, **kwargs):
-        domain = kwargs.get("pk")  # یا از query param
+        domain = kwargs.get("domain")
         record_type = request.query_params.get("type")
         value = request.query_params.get("value")
 
         if not (domain and record_type and value):
             return Response(
-                {"status": "error", "message": "domain, type and value are required"},
+                {
+                    "status": "error",
+                    "message": "domain, type and value are required",
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         deleted_count, _ = DNSRecord.objects.filter(
             domain=domain,
             record_type=record_type,
-            value=value
+            value=value,
         ).delete()
 
         if deleted_count == 0:
@@ -59,10 +82,14 @@ class AdminRecordViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        return Response({"status": "success", "message": "record deleted"}, status=200)
+        return Response(
+            {"status": "success", "message": "record deleted"},
+            status=status.HTTP_200_OK,
+        )
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
+
         domain = request.query_params.get("domain")
         record_type = request.query_params.get("type")
         value = request.query_params.get("value")

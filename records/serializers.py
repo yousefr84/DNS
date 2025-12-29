@@ -22,12 +22,14 @@ class DNSRecordSerializer(serializers.ModelSerializer):
         record_type = attrs.get("record_type")
         priority = attrs.get("priority")
 
-        if record_type == DNSRecord.RecordType.MX and priority is None:
+        from .models import RecordType
+
+        if record_type == RecordType.MX and priority is None:
             raise serializers.ValidationError(
                 {"priority": "MX records require a priority value."}
             )
 
-        if record_type != DNSRecord.RecordType.MX and priority is not None:
+        if record_type != RecordType.MX and priority is not None:
             raise serializers.ValidationError(
                 {"priority": "Priority is only allowed for MX records."}
             )
