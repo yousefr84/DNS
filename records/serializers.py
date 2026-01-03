@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from .models import RecordType
 
 from .models import DNSRecord
 
@@ -22,7 +23,6 @@ class DNSRecordSerializer(serializers.ModelSerializer):
         record_type = attrs.get("record_type")
         priority = attrs.get("priority")
 
-        from .models import RecordType
 
         if record_type == RecordType.MX and priority is None:
             raise serializers.ValidationError(

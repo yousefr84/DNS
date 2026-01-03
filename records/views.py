@@ -11,28 +11,21 @@ class AdminRecordViewSet(
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
-    """
-    /admin/record
-    """
 
     queryset = DNSRecord.objects.all().order_by("domain")
     serializer_class = DNSRecordSerializer
 
-    # استفاده از domain به عنوان lookup
-    lookup_field = "domain"
     lookup_url_kwarg = "domain"
+    lookup_field = "domain"
 
-    # ⭐ حیاتی: اجازه‌ی استفاده از domain دارای dot مثل example.com
     lookup_value_regex = r"[^/]+"
 
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
 
-        # تبدیل type → record_type
         if "type" in data:
             data["record_type"] = data.pop("type")
 
-        # بررسی یکتا بودن رکورد
         if DNSRecord.objects.filter(
             domain=data.get("domain"),
             record_type=data.get("record_type"),

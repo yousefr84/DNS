@@ -80,7 +80,7 @@ def query_upstream_dns(domain: str, record_type: str) -> dict:
 
     except dns.resolver.NXDOMAIN:
         return {
-            "Status": 3,  # NXDOMAIN
+            "Status": 3,
             "Question": [
                 {
                     "name": domain,
@@ -92,7 +92,7 @@ def query_upstream_dns(domain: str, record_type: str) -> dict:
 
     except dns.exception.Timeout:
         return {
-            "Status": 2,  # SERVFAIL
+            "Status": 2,
             "Comment": "Upstream DNS timeout",
         }
 
